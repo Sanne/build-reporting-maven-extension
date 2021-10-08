@@ -31,6 +31,7 @@ public class ReportingMavenExtension extends AbstractMavenLifecycleParticipant {
 
     private static final String BUILD_REPORT_JSON_FILENAME = "build-report.json";
     private static final Pattern REMOVE_COLORS = Pattern.compile("\u001B\\[[;\\d]*m");
+    private static final String UNKNOWN_CAUSE = "unknown cause";
 
     @Requirement
     private Logger logger;
@@ -57,7 +58,7 @@ public class ReportingMavenExtension extends AbstractMavenLifecycleParticipant {
             } else if (buildSummary instanceof BuildFailure) {
                 buildReport.addProjectReport(
                         ProjectReport.failure(project.getName(), projectPath,
-                                REMOVE_COLORS.matcher(((BuildFailure) buildSummary).getCause().getMessage()).replaceAll(""),
+                                extractCauseFromFailure((BuildFailure) buildSummary),
                                 project.getGroupId(), project.getArtifactId()));
             } else if (buildSummary instanceof BuildSuccess) {
                 buildReport.addProjectReport(
@@ -80,4 +81,17 @@ public class ReportingMavenExtension extends AbstractMavenLifecycleParticipant {
             logger.error("Unable to create the " + BUILD_REPORT_JSON_FILENAME + " file", e);
         }
     }
+
+    private String extractCauseFromFailure(BuildFailure buildSummary) {
+        final Throwable cause = buildSummary.getCause();
+        if (cause == null) {
+            return UNKNOWN_CAUSE;
+        }
+        final String message = cause.getMessage();
+        if (message == null) {
+            return UNKNOWN_CAUSE;
+        }
+        return REMOVE_COLORS.matcher(message).replaceAll("");
+    }
+
 }
